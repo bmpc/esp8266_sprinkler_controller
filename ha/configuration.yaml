@@ -1,0 +1,38 @@
+
+switch:
+  - unique_id: irrigation_switch_station1
+    platform: mqtt
+    name: "Irrigation Switch - Station 1"
+    state_topic: "lawn-irrigation/station1/state"
+    command_topic: "lawn-irrigation/station1/set"
+    payload_on: "on|120000"
+    payload_off: "off"
+    state_on: "on"
+    state_off: "off"
+    optimistic: false
+    qos: 0
+    retain: true
+  - unique_id: irrigation_switch_station2
+    platform: mqtt
+    name: "Irrigation Switch - Station 2"
+    state_topic: "lawn-irrigation/station2/state"
+    command_topic: "lawn-irrigation/station2/set"
+    payload_on: "on|120000"
+    payload_off: "off"
+    state_on: "on"
+    state_off: "off"
+    optimistic: false
+    qos: 0
+    retain: true
+  - unique_id: irrigation_switch_station3
+    platform: mqtt
+    name: "Irrigation Switch - Station 3"
+    state_topic: "lawn-irrigation/station3/state"
+    command_topic: "lawn-irrigation/station3/set"
+    payload_on: "on|120000"
+    payload_off: "off"
+    state_on: "on"
+    state_off: "off"
+    optimistic: false
+    qos: 0
+    retain: true
