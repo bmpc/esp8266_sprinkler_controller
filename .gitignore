@@ -1,3 +1,7 @@
+.DS_Store
 */.pio
 */.vscode
 *.code-workspace
+prinkler_controller-backups
+esp8266_sprinkler_controller.bin
+fp-info-cache

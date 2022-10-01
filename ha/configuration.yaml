@@ -1,5 +1,30 @@
 
 switch:
+  - unique_id: irrigation_interface_mode
+    platform: mqtt
+    name: "Irrigation Interface Mode"
+    state_topic: "lawn-irrigation/interface-mode/state"
+    command_topic: "lawn-irrigation/interface-mode/set"
+    payload_on: "on"
+    payload_off: "off"
+    state_on: "on"
+    state_off: "off"
+    optimistic: true
+    qos: 0
+    retain: true
+  - unique_id: irrigation_enabled
+    platform: mqtt
+    name: "Irrigation Enabled"
+    state_topic: "lawn-irrigation/enabled/state"
+    command_topic: "lawn-irrigation/enabled/set"
+    payload_on: "on"
+    payload_off: "off"
+    state_on: "on"
+    state_off: "off"
+    optimistic: true
+    enabled_by_default: true
+    qos: 0
+    retain: true
   - unique_id: irrigation_switch_station1
     platform: mqtt
     name: "Irrigation Switch - Station 1"
@@ -11,7 +36,7 @@ switch:
     state_off: "off"
     optimistic: false
     qos: 0
-    retain: true
+    retain: false
   - unique_id: irrigation_switch_station2
     platform: mqtt
     name: "Irrigation Switch - Station 2"
@@ -23,7 +48,7 @@ switch:
     state_off: "off"
     optimistic: false
     qos: 0
-    retain: true
+    retain: false
   - unique_id: irrigation_switch_station3
     platform: mqtt
     name: "Irrigation Switch - Station 3"
@@ -35,4 +60,16 @@ switch:
     state_off: "off"
     optimistic: false
     qos: 0
-    retain: true
+    retain: false
+
+input_text:
+  lawn_irrigation_station1_input:
+    name: Station 1 - Config
+#    initial: '0 0 6 1-31/2 * *|900'
+  lawn_irrigation_station2_input:
+    name: Station 2 - Config
+#    initial: '0 30 6 1-31/2 * *|900'
+  lawn_irrigation_station3_input:
+    name: Station 3 - Config
+#    initial: '0 0 7 1-31/2 * *|600'
+

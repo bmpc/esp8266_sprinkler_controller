@@ -1,0 +1,43 @@
+- alias: Lawn Irrigation Station 1 Config
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_text.lawn_irrigation_station1_input
+  condition: []
+  action:
+  - service: mqtt.publish
+    data:
+      topic: lawn-irrigation/station1/config
+      retain: true
+      payload: '{{ states(''input_text.lawn_irrigation_station1_input'') }}'
+  mode: single
+- alias: Lawn Irrigation Station 2 Config
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_text.lawn_irrigation_station2_input
+  condition: []
+  action:
+  - service: mqtt.publish
+    data:
+      topic: lawn-irrigation/station2/config
+      retain: true
+      payload: '{{ states(''input_text.lawn_irrigation_station2_input'') }}'
+  mode: single
+- alias: Lawn Irrigation Station 3 Config
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_text.lawn_irrigation_station3_input
+  condition: []
+  action:
+  - service: mqtt.publish
+    data:
+      topic: lawn-irrigation/station3/config
+      retain: true
+      payload: '{{ states(''input_text.lawn_irrigation_station3_input'') }}'
+  mode: single
+
