@@ -2,6 +2,6 @@
 */.pio
 */.vscode
 *.code-workspace
-*/esp8266_sprinkler_controller-backups
+KiCad/esp8266_sprinkler_controller/esp8266_sprinkler_controller-backups/*
 esp8266_sprinkler_controller.bin
 fp-info-cache
