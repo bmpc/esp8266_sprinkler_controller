@@ -7,10 +7,10 @@ namespace sprinkler_controller {
 
 static uint8_t EEPROM_MARKER = 111;
 
-static int EEPROM_SIZE = sizeof(EEPROM_MARKER) + sizeof(StationEvent) + (sizeof(Station) * 3);
+static int EEPROM_SIZE = sizeof(EEPROM_MARKER) + sizeof(StationEvent) + (sizeof(Station) * NUM_STATIONS);
 
 // forward decl
-static void setup_sr();
+static void setup_shift_register();
 static void set_stations_status(uint8_t status, uint8_t enable_pin);
 static void report_status(const Station &station);
 static time_t get_next_station_start(const char *cron, const time_t date);
@@ -61,7 +61,7 @@ void StationController::init(NTPClient *time_client) {
 
   EEPROM.begin(EEPROM_SIZE);
 
-  setup_sr();
+  setup_shift_register();
 
   load();
 
@@ -296,7 +296,7 @@ void StationController::load() {
     EEPROM.get(addr, m_station_event);
     addr += sizeof(m_station_event);
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < NUM_STATIONS; i++) {
       EEPROM.get(addr, m_stations[i]);
       addr += sizeof(Station);
     }
@@ -314,7 +314,7 @@ void StationController::save() {
   EEPROM.put(addr, m_station_event);
   addr += sizeof(m_station_event);
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < NUM_STATIONS; i++) {
     EEPROM.put(addr, m_stations[i]);
     addr += sizeof(Station);
   }
@@ -344,7 +344,7 @@ void StationController::print_state() {
   DEBUG_PRINTLN("################################");
 }
 
-static void set_sr(uint8_t value) {
+static void set_shift_register(uint8_t value) {
   shiftOut(SR_SERIAL_INPUT, SR_CLK, LSBFIRST, value);
 
   digitalWrite(SR_STORAGE_CLK, LOW);
@@ -352,18 +352,44 @@ static void set_sr(uint8_t value) {
   digitalWrite(SR_STORAGE_CLK, LOW);
 }
 
+static void enable_ics() {
+  // use RX pin as GPIO
+//  pinMode(RX, FUNCTION_3);
+//  pinMode(RX, OUTPUT);
+  
+  // TODO: check which pin we can use to control the ICS
+  //       https://randomnerdtutorials.com/esp8266-pinout-reference-gpios/
+  
+  pinMode(ENABLE_ICS_PIN, OUTPUT);
+  digitalWrite(ENABLE_ICS_PIN, HIGH);
+}
+
+static void disable_ics() {
+  // put back RX pin as serial
+//  pinMode(RX, FUNCTION_0);
+//  pinMode(RX, INPUT);
+  
+  
+  digitalWrite(ENABLE_ICS_PIN, LOW);
+}
+
 static void set_stations_status(uint8_t status, uint8_t enable_pin) {
-  set_sr(status);
+  enable_ics();
+
+  set_shift_register(status);
 
   digitalWrite(SR_OUTPUT_ENABLED, LOW);
   delay(50);
   digitalWrite(enable_pin, HIGH);
   delay(1000);
   digitalWrite(enable_pin, LOW);
+
   digitalWrite(SR_OUTPUT_ENABLED, HIGH);
+
+  disable_ics();
 }
 
-static void setup_sr() {
+static void setup_shift_register() {
   digitalWrite(STATION_1_EN_PIN, LOW);
   pinMode(STATION_1_EN_PIN, OUTPUT);
   digitalWrite(STATION_2_EN_PIN, LOW);

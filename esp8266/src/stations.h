@@ -10,14 +10,15 @@
 
 #define MAX_DURATION 1800000 // 30 minutes
 
-#define STATION_1_EN_PIN D5
-#define STATION_2_EN_PIN D6
-#define STATION_3_EN_PIN D7
+#define STATION_1_EN_PIN 14  // D5 nodemcu
+#define STATION_2_EN_PIN 12  // D6 nodemcu
+#define STATION_3_EN_PIN 13  // D7 nodemcu
 
-#define SR_SERIAL_INPUT D1
-#define SR_STORAGE_CLK D4
-#define SR_CLK D2
-#define SR_OUTPUT_ENABLED D3
+#define SR_SERIAL_INPUT 5    // D1 nodemcu
+#define SR_STORAGE_CLK 2     // D4 nodemcu
+#define SR_CLK 4             // D2 nodemcu
+#define SR_OUTPUT_ENABLED 0  // D3 nodemcu
+#define ENABLE_ICS_PIN 9
 
 namespace sprinkler_controller {
 
