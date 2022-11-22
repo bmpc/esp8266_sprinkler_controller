@@ -10,15 +10,15 @@
 
 #define MAX_DURATION 1800000 // 30 minutes
 
-#define STATION_1_EN_PIN 14  // D5 nodemcu
-#define STATION_2_EN_PIN 12  // D6 nodemcu
-#define STATION_3_EN_PIN 13  // D7 nodemcu
+#define STATION_1_EN_PIN 14
+#define STATION_2_EN_PIN 12
+#define STATION_3_EN_PIN 13
 
-#define SR_SERIAL_INPUT 5    // D1 nodemcu
-#define SR_STORAGE_CLK 2     // D4 nodemcu
-#define SR_CLK 4             // D2 nodemcu
-#define SR_OUTPUT_ENABLED 0  // D3 nodemcu
-#define ENABLE_ICS_PIN 9
+#define SR_SERIAL_INPUT 3
+#define SR_STORAGE_CLK 2
+#define SR_CLK 4 
+#define SR_OUTPUT_ENABLED 0 
+#define ENABLE_ICS_PIN 5
 
 namespace sprinkler_controller {
 
@@ -82,12 +82,12 @@ private:
   void mqtt_callback(char *topic, byte *payload, uint32_t length);
   Station *get_station_from_topic(const char* topic);
   bool can_start_station();
-  void process_topic_mode_set(byte *payload, uint16_t length);
-  void process_topic_mode_state(byte *payload, uint16_t length);
-  void process_topic_station_set(Station &station, byte *payload, uint32_t length);
+  void process_topic_mode_set(const char* payload_str, uint16_t length);
+  void process_topic_mode_state(const char* payload_str, uint16_t length);
+  void process_topic_station_set(Station &station, const char* payload_str, uint32_t length);
   void process_topic_station_state(Station &station);
-  void process_topic_station_config(Station &station, byte *payload, uint32_t length);
-  void process_topic_enabled_set(byte *payload, uint32_t length);
+  void process_topic_station_config(Station &station, const char* payload_str, uint32_t length);
+  void process_topic_enabled_set(const char* payload_str, uint32_t length);
   void report_interface_mode_state();
   void load();
   void save();

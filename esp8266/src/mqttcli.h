@@ -13,6 +13,6 @@ void loop();
 void publish(const char* topic, const char* payload, bool retained = false);
 void subscribe(const char* topic);
 
-} // namespace sprinkler_controller::mqtt
+} // namespace sprinkler_controller::mqttcli
 
 #endif

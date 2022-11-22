@@ -10,15 +10,16 @@ static uint8_t EEPROM_MARKER = 111;
 static int EEPROM_SIZE = sizeof(EEPROM_MARKER) + sizeof(StationEvent) + (sizeof(Station) * NUM_STATIONS);
 
 // forward decl
-static void setup_shift_register();
+static void enable_ics();
+static void disable_ics();
 static void set_stations_status(uint8_t status, uint8_t enable_pin);
 static void report_status(const Station &station);
 static time_t get_next_station_start(const char *cron, const time_t date);
 static uint8_t get_station_id(const char *topic);
 static int index_of(const char *str, const char *findstr);
 static bool starts_with(const char* start_str, const char* str);
-static void substr(char s[], char sub[], int p, int l);
-static void substr(char s[], char sub[], int p);
+static void substr(const char s[], char sub[], int p, int l);
+static void substr(const char s[], char sub[], int p);
 
 void Station::start(time_t start, long dur = 0) {
   DEBUG_PRINT("Starting station [");
@@ -61,7 +62,8 @@ void StationController::init(NTPClient *time_client) {
 
   EEPROM.begin(EEPROM_SIZE);
 
-  setup_shift_register();
+  digitalWrite(ENABLE_ICS_PIN, LOW);
+  pinMode(ENABLE_ICS_PIN, OUTPUT);
 
   load();
 
@@ -75,19 +77,23 @@ void StationController::init(NTPClient *time_client) {
     DEBUG_PRINT("] ");
     DEBUG_PRINTLN();
 
+    char payload_str[length + 1];
+    memcpy(payload_str, payload, length);
+    payload_str[length] = '\0';
+
     if (starts_with("lawn-irrigation/interface-mode/set", topic))  {
-      process_topic_mode_set(payload, length); // retained message
+      process_topic_mode_set(payload_str, length); // retained message
     } else if (starts_with("lawn-irrigation/enabled/set", topic))  {
-      process_topic_enabled_set(payload, length); // retained message
+      process_topic_enabled_set(payload_str, length); // retained message
     } else if (starts_with("lawn-irrigation/station", topic))  {
       Station *station = get_station_from_topic(topic);
       if (station != NULL) {
         if (m_interface_mode && index_of(topic, "set") > 0) {
-          process_topic_station_set(*station, payload, length);
+          process_topic_station_set(*station, payload_str, length);
         } else if (m_interface_mode && index_of(topic, "state") > 0) {
           process_topic_station_state(*station);
         } else if (index_of(topic, "config") > 0) {
-          process_topic_station_config(*station, payload, length); // retained message
+          process_topic_station_config(*station, payload_str, length); // retained message
         }
       }
     }
@@ -103,6 +109,8 @@ void StationController::init(NTPClient *time_client) {
     mqttcli::loop();
     delay(100);
   }
+
+  mqttcli::publish("lawn-irrigation/log", "################### Started!", true);
 
   DEBUG_PRINTLN("MQTT init complete.");
 }
@@ -194,38 +202,29 @@ void StationController::process_station_event() {
       sprintf(msg, "Scheduled START event out of sync with the system time...\nScheduled: '%lld' vs Now: '%lld' \nSkipping event!", m_station_event.time, now);
 
       DEBUG_PRINTLN(msg);
-
-      mqttcli::publish("lawn-irrigation/log", msg, true);
     }
   }
 }
 
-void StationController::process_topic_enabled_set(byte *payload, uint32_t length) {
+void StationController::process_topic_enabled_set(const char* payload_str, uint32_t length) {
   DEBUG_PRINTLN("Processing topic 'lawn-irrigation/enabled/set'...");
-
-  char payload_str[length + 1];
-  memcpy(payload_str, payload, length);
-  payload_str[length] = '\0';
 
   m_enabled = strcmp(payload_str, "on") == 0;
 
   DEBUG_PRINTLN("Topic 'lawn-irrigation/enabled/set' done.");
 }
 
-void StationController::process_topic_station_set(Station &station, byte *payload, uint32_t length) {
+void StationController::process_topic_station_set(Station &station, const char* payload_str, uint32_t length) {
   DEBUG_PRINTLN("Processing topic 'lawn-irrigation/station/set'...");
 
   // get op and duration
-  char payload_str[length + 1];
-  memcpy(payload_str, payload, length);
-  payload_str[length] = '\0';
-
   if (starts_with("on", payload_str)) {
     check_stop_stations(true); // if we are starting a station, all other stations must be stopped
     char dur[20];
     substr(payload_str, dur, index_of(payload_str, "|") + 1);
     
     station.start(m_time_client->getEpochTime(), atoi(dur));
+
   } else if (starts_with("off", payload_str)) {
     station.stop();
   }
@@ -243,14 +242,10 @@ void StationController::process_topic_station_state(Station &station) {
   DEBUG_PRINTLN("Topic 'lawn-irrigation/station/state' done.");
 }
 
-void StationController::process_topic_mode_set(byte *payload, uint16_t length) {
+void StationController::process_topic_mode_set(const char* payload_str, uint16_t length) {
   DEBUG_PRINTLN("Processing topic 'lawn-irrigation/interface-mode/set'...");
   
   // get mode
-  char payload_str[length + 1];
-  memcpy(payload_str, payload, length);
-  payload_str[length] = '\0';
-
   m_interface_mode = strncmp("on", payload_str, 2) == 0;
 
   save();
@@ -260,14 +255,10 @@ void StationController::process_topic_mode_set(byte *payload, uint16_t length) {
   DEBUG_PRINTLN("Topic 'lawn-irrigation/interface-mode/set' done.");
 }
 
-void StationController::process_topic_station_config(Station &station, byte *payload, uint32_t length) {
+void StationController::process_topic_station_config(Station &station, const char* payload_str, uint32_t length) {
   DEBUG_PRINTLN("Processing topic 'lawn-irrigation/station/config'...");
 
   // get mode
-  char payload_str[length + 1];
-  memcpy(payload_str, payload, length);
-  payload_str[length] = '\0';
-
   int sep_index = index_of(payload_str, "|");
 
   substr(payload_str, station.cron, 0, sep_index);
@@ -353,24 +344,49 @@ static void set_shift_register(uint8_t value) {
 }
 
 static void enable_ics() {
-  // use RX pin as GPIO
-//  pinMode(RX, FUNCTION_3);
-//  pinMode(RX, OUTPUT);
-  
   // TODO: check which pin we can use to control the ICS
   //       https://randomnerdtutorials.com/esp8266-pinout-reference-gpios/
-  
-  pinMode(ENABLE_ICS_PIN, OUTPUT);
+
+  // setup
+  // use RX pin as GPIO
+  pinMode(SR_SERIAL_INPUT, FUNCTION_3);
+  pinMode(SR_SERIAL_INPUT, OUTPUT);
+
+  digitalWrite(STATION_1_EN_PIN, LOW);
+  pinMode(STATION_1_EN_PIN, OUTPUT);
+  digitalWrite(STATION_2_EN_PIN, LOW);
+  pinMode(STATION_2_EN_PIN, OUTPUT);
+  digitalWrite(STATION_3_EN_PIN, LOW);
+  pinMode(STATION_3_EN_PIN, OUTPUT);
+
+  digitalWrite(SR_OUTPUT_ENABLED, HIGH);
+  pinMode(SR_OUTPUT_ENABLED, OUTPUT);
+
+  digitalWrite(SR_CLK, LOW);
+  pinMode(SR_CLK, OUTPUT);
+
+  digitalWrite(SR_STORAGE_CLK, LOW);
+  pinMode(SR_STORAGE_CLK, OUTPUT);
+
+  // enable
   digitalWrite(ENABLE_ICS_PIN, HIGH);
 }
 
 static void disable_ics() {
-  // put back RX pin as serial
-//  pinMode(RX, FUNCTION_0);
-//  pinMode(RX, INPUT);
-  
-  
+  //disable
   digitalWrite(ENABLE_ICS_PIN, LOW);
+
+  // revert from GPIO to RX 
+  pinMode(SR_SERIAL_INPUT, FUNCTION_0);
+  pinMode(SR_SERIAL_INPUT, INPUT);
+  
+  // float pins
+  pinMode(STATION_1_EN_PIN, INPUT);
+  pinMode(STATION_2_EN_PIN, INPUT);
+  pinMode(STATION_3_EN_PIN, INPUT);
+  pinMode(SR_OUTPUT_ENABLED, INPUT);
+  pinMode(SR_CLK, INPUT);
+  pinMode(SR_STORAGE_CLK, INPUT);
 }
 
 static void set_stations_status(uint8_t status, uint8_t enable_pin) {
@@ -387,26 +403,6 @@ static void set_stations_status(uint8_t status, uint8_t enable_pin) {
   digitalWrite(SR_OUTPUT_ENABLED, HIGH);
 
   disable_ics();
-}
-
-static void setup_shift_register() {
-  digitalWrite(STATION_1_EN_PIN, LOW);
-  pinMode(STATION_1_EN_PIN, OUTPUT);
-  digitalWrite(STATION_2_EN_PIN, LOW);
-  pinMode(STATION_2_EN_PIN, OUTPUT);
-  digitalWrite(STATION_3_EN_PIN, LOW);
-  pinMode(STATION_3_EN_PIN, OUTPUT);
-
-  digitalWrite(SR_OUTPUT_ENABLED, HIGH);
-  pinMode(SR_OUTPUT_ENABLED, OUTPUT);
-
-  pinMode(SR_SERIAL_INPUT, OUTPUT);
-
-  digitalWrite(SR_CLK, LOW);
-  pinMode(SR_CLK, OUTPUT);
-
-  digitalWrite(SR_STORAGE_CLK, LOW);
-  pinMode(SR_STORAGE_CLK, OUTPUT);
 }
 
 static time_t get_next_station_start(const char *cron, time_t date) {
@@ -448,7 +444,7 @@ static bool starts_with(const char* start_str, const char* str) {
   return strncmp(start_str, str, strlen(start_str)) == 0;
 }
 
-static void substr(char s[], char sub[], int p, int l) {
+static void substr(const char s[], char sub[], int p, int l) {
    int c = 0;
    
    while (c < l) {
@@ -458,7 +454,7 @@ static void substr(char s[], char sub[], int p, int l) {
    sub[c] = '\0';
 }
 
-static void substr(char s[], char sub[], int p) {
+static void substr(const char s[], char sub[], int p) {
    int c = 0;
    
    char ch;

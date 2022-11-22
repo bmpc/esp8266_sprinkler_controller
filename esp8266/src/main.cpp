@@ -106,9 +106,9 @@ void setup() {
   time_client.begin();
 
   stctr.init(&time_client);
-  stctr.process_station_event();
 
   if (!stctr.is_interface_mode()) {
+    stctr.process_station_event();
     enter_deep_sleep();
   }
 

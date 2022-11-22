@@ -7,11 +7,11 @@
     (fanout on)
     (autoroute on)
     (postroute on)
-    (vias off)
+    (vias on)
     (via_costs 100)
     (plane_via_costs 10)
     (start_ripup_costs 100)
-    (start_pass_no 20)
+    (start_pass_no 4)
     (layer_rule F.Cu
       (active on)
       (preferred_direction vertical)
@@ -58,12 +58,6 @@
     "kicad_default" "Via[0-1]_800:400_um-kicad_default"
   )
   (class default
-    +9V "Net-(J2-Pad2)" "Net-(J3-Pad1)" "Net-(J3-Pad2)" +3V3 "unconnected-(U2-Pad2)" "Net-(J2-Pad1)" "Net-(R2-Pad2)"
-    "/+5V_EN" /GPIO9 "Net-(R1-Pad2)" /GPIO0 /GPIO15 "Net-(R5-Pad2)" /GPIO13 /GPIO14
-    /GPIO12 "unconnected-(U2-Pad9)" "unconnected-(U2-Pad10)" "unconnected-(U2-Pad12)" "unconnected-(U2-Pad13)" "unconnected-(U2-Pad14)" /GPIO2 /GPIO4
-    /GPIO5 "unconnected-(U2-Pad21)" "unconnected-(U2-Pad22)" +5V /QB /QC /QD "Net-(J4-Pad1)"
-    "Net-(J4-Pad2)" "Net-(J5-Pad1)" "Net-(J5-Pad2)" /QE /QF /QG /QH "unconnected-(U4-Pad9)"
-    /QA
     (clearance_class default)
     (via_rule default)
     (rule
@@ -74,6 +68,12 @@
     )
   )
   (class "kicad_default"
+    +9V "Net-(J2-Pad2)" "Net-(J3-Pad1)" "Net-(J3-Pad2)" +3V3 "unconnected-(U2-Pad2)" "Net-(J2-Pad1)" "Net-(R2-Pad2)"
+    "/GND_EN" "Net-(Q1-Pad2)" "Net-(R1-Pad2)" /GPIO0 /GPIO15 "Net-(R5-Pad2)" /GPIO13 /GPIO14
+    /GPIO12 "unconnected-(U2-Pad9)" "unconnected-(U2-Pad10)" "unconnected-(U2-Pad12)" "unconnected-(U2-Pad13)" "unconnected-(U2-Pad14)" /GPIO2 /GPIO4
+    /GPIO5 "unconnected-(U2-Pad11)" "unconnected-(U2-Pad22)" +5V /QB /QC /QD "Net-(J4-Pad1)"
+    "Net-(J4-Pad2)" "Net-(J5-Pad1)" "Net-(J5-Pad2)" /QE /QF /QG /QH "unconnected-(U4-Pad9)"
+    /QA /GPIO3
     (clearance_class "kicad_default")
     (via_rule "kicad_default")
     (rule
@@ -85,8 +85,8 @@
   )
   (class GND
     GND
-    (clearance_class "kicad_default")
-    (via_rule "kicad_default")
+    (clearance_class GND)
+    (via_rule GND)
     (rule
       (width 250.0)
     )
