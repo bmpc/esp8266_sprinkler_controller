@@ -66,6 +66,8 @@ void enter_deep_sleep() {
     sprintf(msg, "Entering deep sleep mode for '%lld' seconds... good night!", sleep_duration);
     DEBUG_PRINTLN(msg);
 
+    mqttcli::publish("lawn-irrigation/log", msg, true, true);
+
     ESP.deepSleep(sleep_duration * 1000 * 1000); // convert from seconds to microseconds
   } else {
     // if there is no next event, we default to interface mode

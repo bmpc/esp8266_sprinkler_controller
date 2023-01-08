@@ -13,7 +13,7 @@ static int EEPROM_SIZE = sizeof(EEPROM_MARKER) + sizeof(StationEvent) + (sizeof(
 static void enable_ics();
 static void disable_ics();
 static void set_stations_status(uint8_t status, uint8_t enable_pin);
-static void report_status(const Station &station);
+static void report_status(const Station &station, bool is_interface_mode);
 static time_t get_next_station_start(const char *cron, const time_t date);
 static uint8_t get_station_id(const char *topic);
 static int index_of(const char *str, const char *findstr);
@@ -33,8 +33,6 @@ void Station::start(time_t start, long dur = 0) {
 
   uint8_t mask = 1 << (2 * (this->id - 1));
   set_stations_status(mask, enable_pin);
-
-  report_status(*this);
 }
 
 void Station::stop() {
@@ -47,8 +45,6 @@ void Station::stop() {
 
   uint8_t mask = 2 << (2 * (this->id - 1));
   set_stations_status(mask, enable_pin);
-
-  report_status(*this);
 }
 
 void Station::to_string(char* s) {
@@ -110,7 +106,7 @@ void StationController::init(NTPClient *time_client) {
     delay(100);
   }
 
-  mqttcli::publish("lawn-irrigation/log", "################### Started!", true);
+  mqttcli::publish("lawn-irrigation/log", "################### Started!", true, false);
 
   DEBUG_PRINTLN("MQTT init complete.");
 }
@@ -142,6 +138,7 @@ void StationController::check_stop_stations(bool force) {
     if (station.is_active == true) {
       if (force || ((now - station.started) > station.duration)) {
         station.stop();
+        report_status(station, m_interface_mode);
       }
     }
   }
@@ -192,6 +189,7 @@ void StationController::process_station_event() {
         check_stop_stations(true); // if we are starting a station, all other stations must be stopped
         Station &st = m_stations[m_station_event.id - 1];
         st.start(now);
+        report_status(st, m_interface_mode);
 
         save();
       } else {
@@ -224,9 +222,11 @@ void StationController::process_topic_station_set(Station &station, const char* 
     substr(payload_str, dur, index_of(payload_str, "|") + 1);
     
     station.start(m_time_client->getEpochTime(), atoi(dur));
+    report_status(station, m_interface_mode);
 
   } else if (starts_with("off", payload_str)) {
     station.stop();
+    report_status(station, m_interface_mode);
   }
 
   save();
@@ -237,7 +237,7 @@ void StationController::process_topic_station_set(Station &station, const char* 
 void StationController::process_topic_station_state(Station &station) {
   DEBUG_PRINTLN("Processing topic 'lawn-irrigation/station/state'...");
 
-  report_status(station);
+  report_status(station, m_interface_mode);
 
   DEBUG_PRINTLN("Topic 'lawn-irrigation/station/state' done.");
 }
@@ -273,7 +273,7 @@ void StationController::process_topic_station_config(Station &station, const cha
 }
 
 void StationController::report_interface_mode_state() {
-  mqttcli::publish("lawn-irrigation/interface-mode/state", m_interface_mode ? "on" : "off");
+  mqttcli::publish("lawn-irrigation/interface-mode/state", m_interface_mode ? "on" : "off", false, !m_interface_mode);
 }
 
 void StationController::load() {
@@ -397,7 +397,7 @@ static void set_stations_status(uint8_t status, uint8_t enable_pin) {
   digitalWrite(SR_OUTPUT_ENABLED, LOW);
   delay(50);
   digitalWrite(enable_pin, HIGH);
-  delay(1000);
+  delay(2000);
   digitalWrite(enable_pin, LOW);
 
   digitalWrite(SR_OUTPUT_ENABLED, HIGH);
@@ -418,10 +418,10 @@ static time_t get_next_station_start(const char *cron, time_t date) {
   return cron_next(&ce, date);
 }
 
-static void report_status(const Station &station) {
+static void report_status(const Station &station, bool is_interface_mode) {
   char buf[64];
   sprintf(buf, "lawn-irrigation/station%d/state", station.id);
-  mqttcli::publish(buf, station.is_active ? "on" : "off");
+  mqttcli::publish(buf, station.is_active ? "on" : "off", false, !is_interface_mode);
 }
 
 // assuming that the station ID is a single digit

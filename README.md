@@ -117,11 +117,12 @@ After these improvements, I measured the standby current of the circuit to aroun
 | 74HC595 (8-bit shift register)       | x1  |
 | MCP1702-5002E/TO (voltage regulator) | x1  |
 | MCP1702-3302E/TO (voltage regulator) | x1  |
-| BC547 (NPN transistor)               | x1  |
+| SS8050CBU (NPN transistor)           | x1  |
+| 100Ω resistor                        | x1  |
 | 1k resistor                          | x4  |
-| 10k resistor                         | x5  |
-| 100 uF electrolytic capacitor         | x2  |
-| 10 uF electrolytic capacitor          | x1  |
+| 10k resistor                         | x4  |
+| 100 uF electrolytic capacitor        | x2  |
+| 10 uF electrolytic capacitor         | x1  |
 | 1 uF ceramic capacitor (104)         | x8  |
 | SD101A (Schottky Diode)              | x1  |
 | Switch (reset)                       | x1  |

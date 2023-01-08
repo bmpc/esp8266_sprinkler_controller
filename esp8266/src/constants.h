@@ -4,12 +4,12 @@
 
 namespace sprinkler_controller {
 
-const char* SSID = "<WIFI_SSID>";
-const char* PASSWORD = "<WIFI_PWD>";
+extern const char* SSID;
+extern const char* PASSWORD;
 
-const char* MQTT_BROKER = "<MQTT_IP>";
-const char* MQTT_USER = "<MQTT_user>";
-const char* MQTT_PWD = "<MQTT_pwd>";
+extern const char* MQTT_BROKER;
+extern const char* MQTT_USER;
+extern const char* MQTT_PWD;
 
 }
 
