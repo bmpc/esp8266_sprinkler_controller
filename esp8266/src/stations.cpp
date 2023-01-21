@@ -13,7 +13,7 @@ static int EEPROM_SIZE = sizeof(EEPROM_MARKER) + sizeof(StationEvent) + (sizeof(
 static void enable_ics();
 static void disable_ics();
 static void set_stations_status(uint8_t status, uint8_t enable_pin);
-static void report_status(const Station &station, bool is_interface_mode);
+static void report_status(const Station &station);
 static time_t get_next_station_start(const char *cron, const time_t date);
 static uint8_t get_station_id(const char *topic);
 static int index_of(const char *str, const char *findstr);
@@ -65,7 +65,8 @@ void StationController::init(NTPClient *time_client) {
 
   print_state();
 
-  m_time_client->update();
+  int retries = 5;
+  while(!m_time_client->forceUpdate() && retries-- > 0);
 
   mqttcli::init([this](char *topic, byte *payload, uint32_t length) {
     DEBUG_PRINT("MQTT Message arrived [");
@@ -100,18 +101,24 @@ void StationController::init(NTPClient *time_client) {
   mqttcli::subscribe("lawn-irrigation/+/set");
 
   // receive and process retained messages
-  int i = 10;
-  while (i-- > 0) {
+  int loop_idx = 10;
+  while (loop_idx-- > 0) {
     mqttcli::loop();
     delay(100);
   }
 
-  mqttcli::publish("lawn-irrigation/log", "################### Started!", true, false);
+  time_t now = m_time_client->getEpochTime();
+  char msg[200];
+  sprintf(msg, "### Started at: '%lld'. Epoch Time Retries: '%d' ###\n", now, 5 - retries);
+  mqttcli::publish("lawn-irrigation/log", msg, true);
 
   DEBUG_PRINTLN("MQTT init complete.");
 }
 
-void StationController::loop() { mqttcli::loop(); }
+void StationController::loop() { 
+  m_time_client->update();
+  mqttcli::loop(); 
+}
 
 void StationController::set_interface_mode(bool mode) {
     m_interface_mode = mode;
@@ -138,7 +145,7 @@ void StationController::check_stop_stations(bool force) {
     if (station.is_active == true) {
       if (force || ((now - station.started) > station.duration)) {
         station.stop();
-        report_status(station, m_interface_mode);
+        report_status(station);
       }
     }
   }
@@ -183,23 +190,25 @@ StationEvent StationController::next_station_event() {
 void StationController::process_station_event() {
   if (!m_interface_mode && m_station_event.id != -1) {
     check_stop_stations();
-    time_t now = m_time_client->getEpochTime();
-    if (m_station_event.type == START && (m_station_event.time < (now + 20)) && (m_station_event.time > (now - 120))) { // a threshold of 120 seconds to discard old start events
-      if (m_enabled) {
-        check_stop_stations(true); // if we are starting a station, all other stations must be stopped
-        Station &st = m_stations[m_station_event.id - 1];
-        st.start(now);
-        report_status(st, m_interface_mode);
+    if (m_enabled) {
+      time_t now = m_time_client->getEpochTime();
+      if (m_station_event.type == START && (m_station_event.time < (now + 20)) && (m_station_event.time > (now - 120))) { // a threshold of 120 seconds to discard old start events      
+          check_stop_stations(true); // if we are starting a station, all other stations must be stopped
+          Station &st = m_stations[m_station_event.id - 1];
+          st.start(now);
+          report_status(st);
 
-        save();
-      } else {
-        DEBUG_PRINTLN("Skipping station START event since the system is disabled.");
+          save();
+      } else if (m_station_event.type == START) {
+        char msg[200];
+        sprintf(msg, "Scheduled START event out-of-sync with the system time...\nScheduled: '%lld' vs Now: '%lld' \nSkipping event!", m_station_event.time, now);
+        
+        DEBUG_PRINTLN(msg);
+        mqttcli::publish("lawn-irrigation/log", msg, true);
       }
-    } else if (m_station_event.type == START) {
-      char msg[200];
-      sprintf(msg, "Scheduled START event out of sync with the system time...\nScheduled: '%lld' vs Now: '%lld' \nSkipping event!", m_station_event.time, now);
-
-      DEBUG_PRINTLN(msg);
+    } else {
+      DEBUG_PRINTLN("Skipping station START event since the system is disabled.");
+      mqttcli::publish("lawn-irrigation/log", "Skipping station START event since the system is disabled.", true);
     }
   }
 }
@@ -222,11 +231,11 @@ void StationController::process_topic_station_set(Station &station, const char* 
     substr(payload_str, dur, index_of(payload_str, "|") + 1);
     
     station.start(m_time_client->getEpochTime(), atoi(dur));
-    report_status(station, m_interface_mode);
+    report_status(station);
 
   } else if (starts_with("off", payload_str)) {
     station.stop();
-    report_status(station, m_interface_mode);
+    report_status(station);
   }
 
   save();
@@ -237,7 +246,7 @@ void StationController::process_topic_station_set(Station &station, const char* 
 void StationController::process_topic_station_state(Station &station) {
   DEBUG_PRINTLN("Processing topic 'lawn-irrigation/station/state'...");
 
-  report_status(station, m_interface_mode);
+  report_status(station);
 
   DEBUG_PRINTLN("Topic 'lawn-irrigation/station/state' done.");
 }
@@ -273,7 +282,7 @@ void StationController::process_topic_station_config(Station &station, const cha
 }
 
 void StationController::report_interface_mode_state() {
-  mqttcli::publish("lawn-irrigation/interface-mode/state", m_interface_mode ? "on" : "off", false, !m_interface_mode);
+  mqttcli::publish("lawn-irrigation/interface-mode/state", m_interface_mode ? "on" : "off", false);
 }
 
 void StationController::load() {
@@ -397,7 +406,7 @@ static void set_stations_status(uint8_t status, uint8_t enable_pin) {
   digitalWrite(SR_OUTPUT_ENABLED, LOW);
   delay(50);
   digitalWrite(enable_pin, HIGH);
-  delay(2000);
+  delay(500);
   digitalWrite(enable_pin, LOW);
 
   digitalWrite(SR_OUTPUT_ENABLED, HIGH);
@@ -418,10 +427,10 @@ static time_t get_next_station_start(const char *cron, time_t date) {
   return cron_next(&ce, date);
 }
 
-static void report_status(const Station &station, bool is_interface_mode) {
+static void report_status(const Station &station) {
   char buf[64];
   sprintf(buf, "lawn-irrigation/station%d/state", station.id);
-  mqttcli::publish(buf, station.is_active ? "on" : "off", false, !is_interface_mode);
+  mqttcli::publish(buf, station.is_active ? "on" : "off", false);
 }
 
 // assuming that the station ID is a single digit

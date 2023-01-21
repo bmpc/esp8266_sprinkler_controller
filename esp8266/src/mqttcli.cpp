@@ -24,16 +24,12 @@ void loop() {
     mqtt_client.loop();
 }
 
-void publish(const char* topic, const char* payload, bool retained, bool needs_loop) {
+void publish(const char* topic, const char* payload, bool retained) {
   mqtt_client.publish(topic, payload, retained);
-  if (needs_loop) {
-    // if there is no loop we force it here so that published messages can be processed completly.
-    int i = 5;
-    while (i-- > 0) {
-      mqttcli::loop();
-      delay(100);
-    }
-  }
+}
+
+void disconnect() {
+  mqtt_client.disconnect();
 }
 
 void subscribe(const char* topic) {

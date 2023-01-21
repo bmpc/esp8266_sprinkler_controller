@@ -49,6 +49,8 @@
 #include "log.h"
 #include "constants.h"
 
+const int DEEP_SLEEP_THRESHOLD = 3 * 60 * 60; // 3 hours in seconds
+
 using namespace sprinkler_controller;
 
 StationController stctr;
@@ -62,11 +64,21 @@ void enter_deep_sleep() {
 
   if (ev.time != EventType::NOOP && ev.time > now) {
     time_t sleep_duration = ev.time - now;
+    
+    // The maximum deep sleep time is around 3 hours. This may vary due to temperature changes. 
+    // ESP.deepSleepMax() provides the max deep sleep.
+    // We wake up every 3 hours and go right back to sleep if no stations need to be started/stopped. 
+    if (sleep_duration > DEEP_SLEEP_THRESHOLD) {
+      sleep_duration = DEEP_SLEEP_THRESHOLD;
+    }
+
     char msg[100];
     sprintf(msg, "Entering deep sleep mode for '%lld' seconds... good night!", sleep_duration);
     DEBUG_PRINTLN(msg);
 
-    mqttcli::publish("lawn-irrigation/log", msg, true, true);
+    mqttcli::publish("lawn-irrigation/log", msg, true);
+
+    mqttcli::disconnect();
 
     ESP.deepSleep(sleep_duration * 1000 * 1000); // convert from seconds to microseconds
   } else {
