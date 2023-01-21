@@ -100,6 +100,12 @@ Hence, to reduce the quiescent current of the L293D ICs, the power is supplied t
 Even though the L293D ICs are not connected to power in standby mode, some pins can have enough voltage to pull the ESP-12F GPIO15 line HIGH thus preventing the ESP-12F from booting. The solution was to add a diode between the GPIO15 enable line and the L293D chip.
  
 After these improvements, I measured the standby current of the circuit to around **20uA**.
+
+### RTC accuracy on the ESP8266 
+
+The max deep sleep time of the ESP-12F is around 3 to 4 hours. Therefore, we need to wake up evert 3 hours or so and get right back to sleep if no station needs to be started or stopped.
+
+Also, it turns out that the ESP8266 just doesn't have a very precise RTC (Real Time Clock). On a 3 hour period, the ESP8266 RTC would drift ahead around 14 minutes. Without a more precise clock, the only solution is to go back to sleep for the remaining time. 
  
 ### Schematic
  
