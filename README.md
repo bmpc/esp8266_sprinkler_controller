@@ -103,9 +103,9 @@ After these improvements, I measured the standby current of the circuit to aroun
 
 ### RTC accuracy on the ESP8266 
 
-The max deep sleep time of the ESP-12F is around 3 to 4 hours. Therefore, we need to wake up evert 3 hours or so and get right back to sleep if no station needs to be started or stopped.
+The max deep sleep time of the ESP-12F is about 3 to 4 hours. Therefore, the ESP needs to wake up every 3 hours or so and get right back to sleep if no action is required (no station needs to be started or stopped).
 
-Also, it turns out that the ESP8266 just doesn't have a very precise RTC (Real Time Clock). On a 3 hour period, the ESP8266 RTC would drift ahead around 14 minutes. Without a more precise clock, the only solution is to go back to sleep for the remaining time. 
+Also, it turns out that the ESP8266 doesn't have a very precise RTC (Real Time Clock). On a 3 hour period, my ESP8266 RTC would drift ahead around 14 minutes. Without a more precise clock, and considering our use case, we can just go back to sleep for the remaining time. 
  
 ### Schematic
  
