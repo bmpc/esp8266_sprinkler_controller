@@ -40,4 +40,25 @@
       retain: true
       payload: '{{ states(''input_text.lawn_irrigation_station3_input'') }}'
   mode: single
-
+- alias: Update Irrigation Enable Switch based on weather forcast
+  description: ''
+  trigger:
+  - platform: time_pattern
+    hours: '1'
+  condition: []
+  action:
+  - if:
+    - condition: template
+      value_template: '{{ state_attr(''weather.home'', ''forecast'')[0].precipitation
+        > 0.2 }}'
+    then:
+    - service: switch.turn_off
+      data: {}
+      target:
+        entity_id: switch.irrigation_enabled
+    else:
+    - service: switch.turn_on
+      data: {}
+      target:
+        entity_id: switch.irrigation_enabled
+  mode: single
