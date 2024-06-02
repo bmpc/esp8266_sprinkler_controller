@@ -62,30 +62,36 @@ void enter_deep_sleep() {
   time_t now = time_client.getEpochTime();
   StationEvent ev = stctr.next_station_event();
 
-  if (ev.time != EventType::NOOP && ev.time > now) {
-    time_t sleep_duration = ev.time - now;
-    
+  time_t sleep_duration = DEEP_SLEEP_THRESHOLD;
+  if (ev.type != EventType::NOOP && ev.time > now) {
+    time_t new_sleep_duration = ev.time - now;
     // The maximum deep sleep time is around 3 hours. This may vary due to temperature changes. 
     // ESP.deepSleepMax() provides the max deep sleep.
     // We wake up every 3 hours and go right back to sleep if no stations need to be started/stopped. 
-    if (sleep_duration > DEEP_SLEEP_THRESHOLD) {
-      sleep_duration = DEEP_SLEEP_THRESHOLD;
+    if (new_sleep_duration <= DEEP_SLEEP_THRESHOLD) {
+      sleep_duration = new_sleep_duration;
     }
 
-    char msg[100];
-    sprintf(msg, "Entering deep sleep mode for '%lld' seconds... good night!", sleep_duration);
+    char msg[200] = {0};
+    ev.to_string(msg);
     DEBUG_PRINTLN(msg);
-
     mqttcli::publish("lawn-irrigation/log", msg, true);
-
-    mqttcli::disconnect();
-
-    ESP.deepSleep(sleep_duration * 1000 * 1000); // convert from seconds to microseconds
   } else {
-    // if there is no next event, we default to interface mode
-    DEBUG_PRINTLN("No event found to process. Defaulting to interface mode.");
-    stctr.set_interface_mode(true);
+    // There isn't a next event to process
+    char msg[100];
+    sprintf(msg, "No next event found!");
+    DEBUG_PRINTLN(msg);
+    mqttcli::publish("lawn-irrigation/log", msg, true);
   }
+
+  char msg[100];
+  sprintf(msg, "Entering deep sleep mode for '%lld' seconds... good night!", sleep_duration);
+  DEBUG_PRINTLN(msg);
+  mqttcli::publish("lawn-irrigation/log", msg, true);
+
+  mqttcli::disconnect();
+
+  ESP.deepSleep(sleep_duration * 1000 * 1000); // convert from seconds to microseconds
 }
 
 void init_wifi() {

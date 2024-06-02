@@ -6,13 +6,14 @@
 #include <NTPClient.h>
 #include "mqttcli.h"
 
-#define NUM_STATIONS 3
+#define NUM_STATIONS 4
 
 #define MAX_DURATION 1800000 // 30 minutes
 
 #define STATION_1_EN_PIN 14
 #define STATION_2_EN_PIN 12
 #define STATION_3_EN_PIN 13
+#define STATION_4_EN_PIN 15
 
 #define SR_SERIAL_INPUT 3
 #define SR_STORAGE_CLK 2
@@ -76,7 +77,8 @@ private:
   bool m_interface_mode;
   Station m_stations[NUM_STATIONS] = {{1, STATION_1_EN_PIN, false, 0, 0, ""},
                                     {2, STATION_2_EN_PIN, false, 0, 0, ""},
-                                    {3, STATION_3_EN_PIN, false, 0, 0, ""}};
+                                    {3, STATION_3_EN_PIN, false, 0, 0, ""},
+                                    {4, STATION_4_EN_PIN, false, 0, 0, ""}};
   StationEvent m_station_event;
 
   void mqtt_callback(char *topic, byte *payload, uint32_t length);
