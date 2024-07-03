@@ -26,6 +26,7 @@ void loop() {
 
 void publish(const char* topic, const char* payload, bool retained) {
   mqtt_client.publish(topic, payload, retained);
+  mqtt_client.flush();
 }
 
 void disconnect() {

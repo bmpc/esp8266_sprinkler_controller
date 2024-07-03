@@ -5,7 +5,7 @@
 
 namespace sprinkler_controller {
 
-static uint8_t EEPROM_MARKER = 111;
+static uint8_t EEPROM_MARKER = 112;
 
 static int EEPROM_SIZE = sizeof(EEPROM_MARKER) + sizeof(StationEvent) + (sizeof(Station) * NUM_STATIONS);
 
@@ -192,31 +192,35 @@ void StationController::process_station_event() {
     return;
 
   check_stop_stations();
-  if (m_enabled && m_station_event.type == START) {
-    time_t now = m_time_client->getEpochTime();
-    if (m_station_event.time < (now + 20)) {
-      char msg[200];
-      sprintf(msg, "Scheduled START event out-of-sync with the system time...\nScheduled: '%lld' vs Now: '%lld' \nSkipping event!", m_station_event.time, now);
-      
-      DEBUG_PRINTLN(msg);
-      mqttcli::publish("lawn-irrigation/log", msg, true);
-    } else if (m_station_event.time > (now - 120)) {
-      char msg[200];
-      sprintf(msg, "Nothing to do... let's go back to sleep!");
-      
-      DEBUG_PRINTLN(msg);
-      mqttcli::publish("lawn-irrigation/log", msg, true);
+
+  if (m_station_event.type == START) {
+    if (m_enabled) {
+      time_t now = m_time_client->getEpochTime();
+      if (now > m_station_event.time + 30) {
+        char msg[200];
+        sprintf(msg, "Scheduled START event out-of-sync with the system time...\nScheduled: '%lld' vs Now: '%lld' \nSkipping event!", m_station_event.time, now);
+        
+        DEBUG_PRINTLN(msg);
+        mqttcli::publish("lawn-irrigation/log", msg, true);
+      } else if (now < (m_station_event.time - 120)) {
+        char msg[200];
+        sprintf(msg, "Nothing to do... let's go back to sleep!");
+        
+        DEBUG_PRINTLN(msg);
+        mqttcli::publish("lawn-irrigation/log", msg, true);
+      } else {
+        check_stop_stations(true); // if we are starting a station, all other stations must be stopped
+        
+        Station &st = m_stations[m_station_event.id - 1];
+        st.start(now);
+        report_status(st);
+        
+        save();
+      } 
     } else {
-      check_stop_stations(true); // if we are starting a station, all other stations must be stopped
-      Station &st = m_stations[m_station_event.id - 1];
-      st.start(now);
-      report_status(st);
-      
-      save();
-    } 
-  } else {
-    DEBUG_PRINTLN("Skipping station START event since the system is disabled.");
-    mqttcli::publish("lawn-irrigation/log", "Skipping station START event since the system is disabled.", true);
+      DEBUG_PRINTLN("Skipping station START event since the system is disabled.");
+      mqttcli::publish("lawn-irrigation/log", "Skipping station START event since the system is disabled.", true);
+    }
   }
 }
 
@@ -302,12 +306,12 @@ void StationController::load() {
 
     EEPROM.get(addr, m_station_event);
     addr += sizeof(m_station_event);
-/*
+
     for (int i = 0; i < NUM_STATIONS; i++) {
       EEPROM.get(addr, m_stations[i]);
       addr += sizeof(Station);
     }
-*/
+
     DEBUG_PRINTLN("done.");
   }
 }
@@ -320,12 +324,12 @@ void StationController::save() {
 
   EEPROM.put(addr, m_station_event);
   addr += sizeof(m_station_event);
-/*
+
   for (int i = 0; i < NUM_STATIONS; i++) {
     EEPROM.put(addr, m_stations[i]);
     addr += sizeof(Station);
   }
-*/
+
   EEPROM.commit();
 
   DEBUG_PRINTLN("done.");

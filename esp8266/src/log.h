@@ -2,7 +2,7 @@
 #ifndef _LOG_H_
 #define _LOG_H_
 
-// #define DEBUGING 1 // debug on USB Serial
+//#define DEBUGING 1 // debug on USB Serial
 
 #ifdef DEBUGING
 #define DEBUG_PRINT(x) Serial.flush(); Serial.print(x)
