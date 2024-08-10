@@ -174,7 +174,8 @@ void loop() {
     enter_deep_sleep();
   }
 
-  stctr.loop();
-  stctr.check_stop_stations();
   ArduinoOTA.handle();
+
+  stctr.loop();
+  
 }

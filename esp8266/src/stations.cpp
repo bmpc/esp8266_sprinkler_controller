@@ -9,6 +9,8 @@ static uint8_t EEPROM_MARKER = 112;
 
 static int EEPROM_SIZE = sizeof(EEPROM_MARKER) + sizeof(StationEvent) + (sizeof(Station) * NUM_STATIONS);
 
+static uint64_t lastMillis = 0;
+
 // forward decl
 static void enable_ics();
 static void disable_ics();
@@ -115,18 +117,26 @@ void StationController::init(NTPClient *time_client) {
   DEBUG_PRINTLN("MQTT init complete.");
 }
 
-void StationController::loop() { 
+void StationController::loop() {
   m_time_client->update();
-  mqttcli::loop(); 
+  mqttcli::loop();
+
+  // process station events every 30 seconds
+  if (millis() - lastMillis >= 30*1000UL) {
+      lastMillis = millis();
+
+      process_station_event();
+      next_station_event();
+  }
 }
 
 void StationController::set_interface_mode(bool mode) {
-    m_interface_mode = mode;
+  m_interface_mode = mode;
 
-    save();
+  save();
 
-    report_interface_mode_state();
-  }
+  report_interface_mode_state();
+}
 
 // TOPIC format: lawn-irrigation/station#/set
 Station *StationController::get_station_from_topic(const char* topic) {
@@ -188,10 +198,10 @@ StationEvent StationController::next_station_event() {
 }
 
 void StationController::process_station_event() {
-  if (m_interface_mode || m_station_event.id == -1)
-    return;
-
   check_stop_stations();
+  
+  if (m_station_event.id == -1)
+    return;
 
   if (m_station_event.type == START) {
     if (m_enabled) {
@@ -202,12 +212,12 @@ void StationController::process_station_event() {
         
         DEBUG_PRINTLN(msg);
         mqttcli::publish("lawn-irrigation/log", msg, true);
-      } else if (now < (m_station_event.time - 120)) {
+      } else if (now < (m_station_event.time - 30)) {
         char msg[200];
-        sprintf(msg, "Nothing to do... let's go back to sleep!");
+        sprintf(msg, "Nothing to do yet...!");
         
         DEBUG_PRINTLN(msg);
-        mqttcli::publish("lawn-irrigation/log", msg, true);
+        // mqttcli::publish("lawn-irrigation/log", msg, true);
       } else {
         check_stop_stations(true); // if we are starting a station, all other stations must be stopped
         
@@ -219,7 +229,7 @@ void StationController::process_station_event() {
       } 
     } else {
       DEBUG_PRINTLN("Skipping station START event since the system is disabled.");
-      mqttcli::publish("lawn-irrigation/log", "Skipping station START event since the system is disabled.", true);
+      // mqttcli::publish("lawn-irrigation/log", "Skipping station START event since the system is disabled.", true);
     }
   }
 }
@@ -417,7 +427,7 @@ static void set_stations_status(uint8_t status, uint8_t enable_pin) {
   digitalWrite(SR_OUTPUT_ENABLED, LOW);
   delay(50);
   digitalWrite(enable_pin, HIGH);
-  delay(500);
+  delay(1000);
   digitalWrite(enable_pin, LOW);
 
   digitalWrite(SR_OUTPUT_ENABLED, HIGH);

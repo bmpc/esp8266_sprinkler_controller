@@ -2,9 +2,9 @@
 #ifndef _LOG_H_
 #define _LOG_H_
 
-//#define DEBUGING 1 // debug on USB Serial
+//#define DEBUGGING 1 // debug on USB Serial
 
-#ifdef DEBUGING
+#ifdef DEBUGGING
 #define DEBUG_PRINT(x) Serial.flush(); Serial.print(x)
 #define DEBUG_PRINT_HEX(x) Serial.flush(); Serial.print(x, HEX)
 #define DEBUG_PRINTLN(x) Serial.flush(); Serial.println(x)
@@ -29,7 +29,7 @@
 #include <Arduino.h>
 
 inline void setupSerial() {
-    #ifdef DEBUGING
+    #ifdef DEBUGGING
     Serial.begin(9600);
     while (!Serial) {
         ; // wait for serial port to connect. Needed for native USB port only
