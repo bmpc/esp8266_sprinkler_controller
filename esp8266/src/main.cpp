@@ -74,20 +74,13 @@ void enter_deep_sleep() {
 
     char msg[200] = {0};
     ev.to_string(msg);
-    DEBUG_PRINTLN(msg);
-    mqttcli::publish("lawn-irrigation/log", msg, true);
+    report_log("[%lld] Next event: %s", now, msg);
   } else {
     // There isn't a next event to process
-    char msg[100];
-    sprintf(msg, "No next event found!");
-    DEBUG_PRINTLN(msg);
-    mqttcli::publish("lawn-irrigation/log", msg, true);
+    report_log("[%lld] No next event found!", now);
   }
 
-  char msg[100];
-  sprintf(msg, "Entering deep sleep mode for '%lld' seconds... good night!", sleep_duration);
-  DEBUG_PRINTLN(msg);
-  mqttcli::publish("lawn-irrigation/log", msg, true);
+  report_log("[%lld] Entering deep sleep mode for '%lld' seconds... good night!", now, sleep_duration);
 
   mqttcli::disconnect();
 
@@ -97,9 +90,7 @@ void enter_deep_sleep() {
 void init_wifi() {
   delay(100);
   // We start by connecting to the WiFi network
-  DEBUG_PRINTLN();
-  DEBUG_PRINT("Connecting to ");
-  DEBUG_PRINTLN(SSID);
+  debug_printf("Connecting to %s\n", SSID);
 
   WiFi.setAutoConnect(true);
   WiFi.setAutoReconnect(true);
@@ -107,16 +98,13 @@ void init_wifi() {
   WiFi.begin(SSID, PASSWORD);
 
   while (WiFi.status() != WL_CONNECTED) {
-    DEBUG_PRINT(".");
+    debug_printf(".");
     delay(500);
   }
 
   randomSeed(micros());
 
-  DEBUG_PRINTLN("");
-  DEBUG_PRINTLN("WiFi connected");
-  DEBUG_PRINT("IP address: ");
-  DEBUG_PRINTLN(WiFi.localIP());
+  debug_printf("WiFi connected. IP address: %s\n", WiFi.localIP().toString().c_str());
 }
 
 void setup() {  
@@ -141,34 +129,35 @@ void setup() {
     }
 
     // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-    DEBUG_PRINTLN("Start updating " + type);
+    debug_printf("Start updating %s\n", type);
   });
   ArduinoOTA.onEnd([]() {
-    DEBUG_PRINTLN("\nEnd");
+    debug_printf("\nEnd");
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    DEBUG_PRINTF("Progress: %u%%\r", (progress / (total / 100)));
+    debug_printf("Progress: %u%%\r", (progress / (total / 100)));
   });
   ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
+    debug_printf("Error[%u]: ", error);
     if (error == OTA_AUTH_ERROR) {
-      DEBUG_PRINTLN("Auth Failed");
+      debug_printf("Auth Failed");
     } else if (error == OTA_BEGIN_ERROR) {
-      DEBUG_PRINTLN("Begin Failed");
+      debug_printf("Begin Failed");
     } else if (error == OTA_CONNECT_ERROR) {
-      DEBUG_PRINTLN("Connect Failed");
+      debug_printf("Connect Failed");
     } else if (error == OTA_RECEIVE_ERROR) {
-      DEBUG_PRINTLN("Receive Failed");
+      debug_printf("Receive Failed");
     } else if (error == OTA_END_ERROR) {
-      DEBUG_PRINTLN("End Failed");
+      debug_printf("End Failed");
     }
+    debug_printf("\n");
   });
   ArduinoOTA.begin();
 }
 
 void loop() {
   if (!stctr.is_interface_mode()) {
-    DEBUG_PRINTLN("Interface mode switched off.");
+    debug_printf("Interface mode switched off.");
     // if we get here, this means that the interface mode was switched off
     stctr.check_stop_stations(true);
     enter_deep_sleep();

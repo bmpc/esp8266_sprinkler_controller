@@ -42,17 +42,16 @@ static void mqtt_connect() {
   uint8_t retries = 0;
   while (!mqtt_client.connected() && retries < 5) {
     retries++;
-    DEBUG_PRINTLN("Attempting MQTT connection...");
+    debug_printf("Attempting MQTT connection...\n");
     // Create a random client ID
     char client_id[20];
-    sprintf(client_id, "ESP8266Client-%04X",random(0xffff));
+    sprintf(client_id, "ESP8266Client-%04ld",random(0xffff));
     // Attempt to connect
     if (mqtt_client.connect(client_id, MQTT_USER, MQTT_PWD)) {
-      DEBUG_PRINTLN("connected");
+      debug_printf("connected\n");
     } else {
-      DEBUG_PRINT("failed, rc=");
-      DEBUG_PRINT(mqtt_client.state());
-      DEBUG_PRINTLN(" try again in 5 seconds");
+      debug_printf("failed, rc=%d try again in 5 seconds", mqtt_client.state());
+
       // Wait 5 seconds before retrying
       delay(5000);
     }

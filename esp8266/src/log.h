@@ -4,29 +4,29 @@
 
 //#define DEBUGGING 1 // debug on USB Serial
 
-#ifdef DEBUGGING
-#define DEBUG_PRINT(x) Serial.flush(); Serial.print(x)
-#define DEBUG_PRINT_HEX(x) Serial.flush(); Serial.print(x, HEX)
-#define DEBUG_PRINTLN(x) Serial.flush(); Serial.println(x)
-#define DEBUG_PRINTLN_HEX(x) Serial.flush(); Serial.println(x, HEX)
-#define DEBUG_PRINTF(x, x1) Serial.flush(); Serial.printf(x, x1)
-#define DEBUG_PRINTF2(x, x1, x2) Serial.flush(); Serial.printf(x, x1, x2)
-#define DEBUG_PRINTF3(x, x1, x2, x3) Serial.flush(); Serial.printf(x, x1, x2, x3)
-#define DEBUG_PRINTF4(x, x1, x2, x3, x4) Serial.flush(); Serial.printf(x, x1, x2, x3, x4)
-#define DEBUG_PRINTF5(x, x1, x2, x3, x4, x5) Serial.flush(); Serial.printf(x, x1, x2, x3, x4, x5)
-#else
-#define DEBUG_PRINT(x)
-#define DEBUG_PRINT_HEX(x)
-#define DEBUG_PRINTLN(x)
-#define DEBUG_PRINTLN_HEX(x)
-#define DEBUG_PRINTF(x, x1)
-#define DEBUG_PRINTF2(x, x1, x2)
-#define DEBUG_PRINTF3(x, x1, x2, x3)
-#define DEBUG_PRINTF4(x, x1, x2, x3, x4)
-#define DEBUG_PRINTF5(x, x1, x2, x3, x4, x5)
-#endif
-
 #include <Arduino.h>
+#include "mqttcli.h"
+
+inline void debug_printf(const char * fmt, ...) {
+#ifdef DEBUGGING
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+#endif
+}
+
+inline void report_log(const char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  char msg[200];
+  
+  vsprintf(msg, fmt, args);
+  debug_printf(strcat(msg, "\n"));
+  sprinkler_controller::mqttcli::publish("lawn-irrigation/log", msg, true);
+  
+  va_end(args);
+}
 
 inline void setupSerial() {
     #ifdef DEBUGGING
@@ -35,7 +35,7 @@ inline void setupSerial() {
         ; // wait for serial port to connect. Needed for native USB port only
     }
 
-    DEBUG_PRINTLN("Ready.");
+    Serial.printf("Ready.");
     #endif
 }
 

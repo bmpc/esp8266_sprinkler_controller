@@ -54,7 +54,7 @@ struct StationEvent {
       case START: t_str = "START"; break;
       case STOP: t_str = "STOP"; break;
     }
-    sprintf(str, "Station:%d; Event:%s; At:%lld;", id, t_str.c_str(), time);
+    sprintf(str, "Station:%d; Event:%s; At:%lld;\n", id, t_str.c_str(), time);
   }
 };
 
