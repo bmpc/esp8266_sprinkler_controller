@@ -37,7 +37,6 @@ void Station::start(time_t start, long dur = 0) {
 void Station::stop() {
   this->started = 0;
   this->is_active = false;
-  this->duration = 0;
 
   uint8_t mask = 2 << (2 * (this->id - 1));
   set_stations_status(mask, enable_pin);
