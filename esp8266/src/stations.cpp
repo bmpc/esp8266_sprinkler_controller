@@ -5,7 +5,7 @@
 
 namespace sprinkler_controller {
 
-static uint8_t EEPROM_MARKER = 112;
+static uint8_t EEPROM_MARKER = 114;
 
 static int EEPROM_SIZE = sizeof(EEPROM_MARKER) + sizeof(StationEvent) + (sizeof(Station) * NUM_STATIONS);
 
@@ -27,7 +27,9 @@ void Station::start(time_t start, long dur = 0) {
   this->started = start;
   this->is_active = true;
   if (dur > 0) {
-    this->duration = dur > MAX_DURATION ? MAX_DURATION : dur;
+    this->active_duration = dur > MAX_DURATION ? MAX_DURATION : dur;
+  } else {
+    this->active_duration = this->config_duration;
   }
 
   uint8_t mask = 1 << (2 * (this->id - 1));
@@ -43,7 +45,7 @@ void Station::stop() {
 }
 
 void Station::to_string(char* s) {
-  sprintf(s, "Station[%d] { enable_pin: %d, is_active: %d, started: %lld, duration: %lu, cron: '%s' }\n", id, enable_pin, is_active, started, duration, cron);
+  sprintf(s, "Station[%d] { enable_pin: %d, is_active: %d, started: %lld, duration[active]: %lu, duration[config]: %lu, cron: '%s' }\n", id, enable_pin, is_active, started, active_duration, config_duration, cron);
 }
 
 void StationController::init(NTPClient *time_client) {
@@ -141,8 +143,8 @@ void StationController::check_stop_stations(bool force) {
     Station &station = this->m_stations[i];
     time_t now = m_time_client->getEpochTime();
     if (station.is_active == true) {
-      if (force || ((now - station.started) > station.duration)) {
-        report_log("[%lld] Stopping station %d. Started = %lld, Duration = %ld, Elapsed = %lld, Forced = %d", now, station.id, station.started, station.duration, now - station.started, force);
+      if (force || ((now - station.started) > station.active_duration)) {
+        report_log("[%lld] Stopping station %d. Started = %lld, Duration[active] = %ld, Elapsed = %lld, Forced = %d", now, station.id, station.started, station.active_duration, now - station.started, force);
         
         station.stop();
 
@@ -159,7 +161,7 @@ StationEvent StationController::next_station_event() {
     Station &station = m_stations[i];
 
     if (station.is_active == true) {
-      time_t t = station.started + station.duration;
+      time_t t = station.started + station.config_duration;
       if (next_event.time == 0 || next_event.time > t) {
         next_event.id = station.id;
         next_event.time = t;
@@ -171,6 +173,7 @@ StationEvent StationController::next_station_event() {
         if (next_event.time == 0 || next_event.time > t) {
           next_event.id = station.id;
           next_event.time = t;
+          next_event.duration = station.config_duration;
           next_event.type = EventType::START;
         }
       }
@@ -208,9 +211,9 @@ void StationController::process_station_event() {
 
             Station &st = m_stations[m_station_event.id - 1];
             
-            report_log("[%lld] Starting station %d. Duration = %ld", now, st.id, st.duration);
+            report_log("[%lld] Starting station %d. Duration = %ld", now, st.id, m_station_event.duration);
             
-            st.start(now);
+            st.start(now, m_station_event.duration);
             report_status(st);
             
             save();
@@ -282,7 +285,7 @@ void StationController::process_topic_station_config(Station &station, const cha
   char dur[10] = {0};
   substr(payload_str, dur, sep_index + 1);
 
-  station.duration = atoi(dur);
+  station.config_duration = atoi(dur);
 
   save();
 
@@ -339,7 +342,7 @@ void StationController::print_state() {
   m_station_event.to_string(msg);
   debug_printf(msg);
   for (int i=0; i < NUM_STATIONS; i++) {
-    char s[100];
+    char s[200];
     m_stations[i].to_string(s);
     debug_printf(s);
   }

@@ -8,7 +8,7 @@
 
 #define NUM_STATIONS 4
 
-#define MAX_DURATION 1800000 // 30 minutes
+#define MAX_DURATION 1800 // 30 minutes
 
 #define STATION_1_EN_PIN 14
 #define STATION_2_EN_PIN 12
@@ -28,13 +28,17 @@ namespace sprinkler_controller {
  * station state
  **/
 struct Station {
+  // config
   int id;
   int enable_pin;
+  char cron[40];
+  long config_duration; // in seconds
+
+  // state
   bool is_active;
   time_t started;
-  long duration; // in seconds
-  char cron[40];
-
+  long active_duration; // in seconds
+  
   void start(time_t start, long dur);
   void stop();
   void to_string(char* buf);
@@ -45,6 +49,7 @@ enum EventType { NOOP, START, STOP };
 struct StationEvent {
   int8_t id = -1;
   time_t time = 0;
+  time_t duration = 0;
   EventType type = NOOP;
 
   inline void to_string(char* str) {
@@ -54,7 +59,7 @@ struct StationEvent {
       case START: t_str = "START"; break;
       case STOP: t_str = "STOP"; break;
     }
-    sprintf(str, "Station:%d; Event:%s; At:%lld;\n", id, t_str.c_str(), time);
+    sprintf(str, "Station:%d; Event:%s; At:%lld; Duration:%lld;\n", id, t_str.c_str(), time, duration);
   }
 };
 
@@ -75,10 +80,10 @@ private:
   NTPClient *m_time_client;
   bool m_enabled = true;
   bool m_interface_mode;
-  Station m_stations[NUM_STATIONS] = {{1, STATION_1_EN_PIN, false, 0, 0, ""},
-                                    {2, STATION_2_EN_PIN, false, 0, 0, ""},
-                                    {3, STATION_3_EN_PIN, false, 0, 0, ""},
-                                    {4, STATION_4_EN_PIN, false, 0, 0, ""}};
+  Station m_stations[NUM_STATIONS] = {{1, STATION_1_EN_PIN, "", 0, false, 0, 0},
+                                      {2, STATION_2_EN_PIN, "", 0, false, 0, 0},
+                                      {3, STATION_3_EN_PIN, "", 0, false, 0, 0},
+                                      {4, STATION_4_EN_PIN, "", 0, false, 0, 0}};
   StationEvent m_station_event;
 
   void mqtt_callback(char *topic, byte *payload, uint32_t length);
