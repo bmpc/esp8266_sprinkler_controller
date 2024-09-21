@@ -163,6 +163,18 @@ void loop() {
     enter_deep_sleep();
   }
 
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi disconnected. Reconnecting...");
+    WiFi.reconnect();
+    
+    while (WiFi.status() != WL_CONNECTED) {
+      debug_printf(".");
+      delay(500);
+    }
+
+    stctr.init(&time_client);
+  }
+
   ArduinoOTA.handle();
 
   stctr.loop();

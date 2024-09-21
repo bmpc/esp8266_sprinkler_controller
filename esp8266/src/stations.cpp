@@ -5,7 +5,7 @@
 
 namespace sprinkler_controller {
 
-static uint8_t EEPROM_MARKER = 114;
+static uint8_t EEPROM_MARKER = 115;
 
 static int EEPROM_SIZE = sizeof(EEPROM_MARKER) + sizeof(StationEvent) + (sizeof(Station) * NUM_STATIONS);
 
@@ -39,13 +39,14 @@ void Station::start(time_t start, long dur = 0) {
 void Station::stop() {
   this->started = 0;
   this->is_active = false;
+  this->active_duration = 0;
 
   uint8_t mask = 2 << (2 * (this->id - 1));
   set_stations_status(mask, enable_pin);
 }
 
 void Station::to_string(char* s) {
-  sprintf(s, "Station[%d] { enable_pin: %d, is_active: %d, started: %lld, duration[active]: %lu, duration[config]: %lu, cron: '%s' }\n", id, enable_pin, is_active, started, active_duration, config_duration, cron);
+  sprintf(s, "Station[%d] { enable_pin: %d, is_active: %d, started: %lld, duration[active]: %ld, duration[config]: %ld, cron: '%s' }\n", id, enable_pin, is_active, started, active_duration, config_duration, cron);
 }
 
 void StationController::init(NTPClient *time_client) {
@@ -161,7 +162,7 @@ StationEvent StationController::next_station_event() {
     Station &station = m_stations[i];
 
     if (station.is_active == true) {
-      time_t t = station.started + station.config_duration;
+      time_t t = station.started + station.active_duration;
       if (next_event.time == 0 || next_event.time > t) {
         next_event.id = station.id;
         next_event.time = t;

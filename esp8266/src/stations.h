@@ -8,7 +8,7 @@
 
 #define NUM_STATIONS 4
 
-#define MAX_DURATION 1800 // 30 minutes
+#define MAX_DURATION 1800L // 30 minutes
 
 #define STATION_1_EN_PIN 14
 #define STATION_2_EN_PIN 12
@@ -49,7 +49,7 @@ enum EventType { NOOP, START, STOP };
 struct StationEvent {
   int8_t id = -1;
   time_t time = 0;
-  time_t duration = 0;
+  long duration = 0;
   EventType type = NOOP;
 
   inline void to_string(char* str) {
@@ -59,7 +59,7 @@ struct StationEvent {
       case START: t_str = "START"; break;
       case STOP: t_str = "STOP"; break;
     }
-    sprintf(str, "Station:%d; Event:%s; At:%lld; Duration:%lld;\n", id, t_str.c_str(), time, duration);
+    sprintf(str, "Station:%d; Event:%s; At:%lld; Duration:%ld;\n", id, t_str.c_str(), time, duration);
   }
 };
 

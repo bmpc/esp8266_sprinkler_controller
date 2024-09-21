@@ -2,7 +2,7 @@
 #ifndef _LOG_H_
 #define _LOG_H_
 
-//#define DEBUGGING 1 // debug on USB Serial
+// #define DEBUGGING 1 // debug on USB Serial
 
 #include <Arduino.h>
 #include "mqttcli.h"
@@ -22,7 +22,9 @@ inline void report_log(const char* fmt, ...) {
   char msg[200];
   
   vsprintf(msg, fmt, args);
+  #ifdef DEBUGGING
   debug_printf(strcat(msg, "\n"));
+  #endif
   sprinkler_controller::mqttcli::publish("lawn-irrigation/log", msg, true);
   
   va_end(args);
