@@ -11,6 +11,9 @@ static int EEPROM_SIZE = sizeof(EEPROM_MARKER) + sizeof(StationEvent) + (sizeof(
 
 static uint64_t lastMillis = 0;
 
+// topics to subscribe 
+const char *SUBS_TOPICS[2] = {"lawn-irrigation/+/config","lawn-irrigation/+/set"};
+
 // forward decl
 static void enable_ics();
 static void disable_ics();
@@ -65,33 +68,32 @@ void StationController::init(NTPClient *time_client) {
   while(!m_time_client->forceUpdate() && retries-- > 0);
 
   mqttcli::init([this](char *topic, byte *payload, uint32_t length) {
-    debug_printf("MQTT Message arrived [%s]\n", topic);
-
-    char payload_str[length + 1];
-    memcpy(payload_str, payload, length);
-    payload_str[length] = '\0';
-
-    if (starts_with("lawn-irrigation/interface-mode/set", topic))  {
-      process_topic_mode_set(payload_str, length); // retained message
-    } else if (starts_with("lawn-irrigation/enabled/set", topic))  {
-      process_topic_enabled_set(payload_str, length); // retained message
-    } else if (starts_with("lawn-irrigation/station", topic))  {
-      Station *station = get_station_from_topic(topic);
-      if (station != NULL) {
-        if (m_interface_mode && index_of(topic, "set") > 0) {
-          process_topic_station_set(*station, payload_str, length);
-        } else if (m_interface_mode && index_of(topic, "state") > 0) {
-          process_topic_station_state(*station);
-        } else if (index_of(topic, "config") > 0) {
-          process_topic_station_config(*station, payload_str, length); // retained message
+      debug_printf("MQTT Message arrived [%s]\n", topic);
+  
+      char payload_str[length + 1];
+      memcpy(payload_str, payload, length);
+      payload_str[length] = '\0';
+  
+      if (starts_with("lawn-irrigation/interface-mode/set", topic))  {
+        process_topic_mode_set(payload_str, length); // retained message
+      } else if (starts_with("lawn-irrigation/enabled/set", topic))  {
+        process_topic_enabled_set(payload_str, length); // retained message
+      } else if (starts_with("lawn-irrigation/station", topic))  {
+        Station *station = get_station_from_topic(topic);
+        if (station != NULL) {
+          if (m_interface_mode && index_of(topic, "set") > 0) {
+            process_topic_station_set(*station, payload_str, length);
+          } else if (m_interface_mode && index_of(topic, "state") > 0) {
+            process_topic_station_state(*station);
+          } else if (index_of(topic, "config") > 0) {
+            process_topic_station_config(*station, payload_str, length); // retained message
+          }
         }
       }
-    }
-  });
-
-  // subscribe to messages
-  mqttcli::subscribe("lawn-irrigation/+/config");
-  mqttcli::subscribe("lawn-irrigation/+/set");
+    },
+    SUBS_TOPICS, 
+   2
+  );
 
   // receive and process retained messages
   int loop_idx = 10;

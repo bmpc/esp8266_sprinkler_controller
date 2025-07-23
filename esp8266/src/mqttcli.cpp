@@ -8,13 +8,25 @@ namespace sprinkler_controller::mqttcli {
 
 static WiFiClient espClient;
 static PubSubClient mqtt_client(espClient);
+static char topics[10][40];
+static int topic_count = 0;
 
 static void mqtt_connect();
 
-void init(MQTT_CALLBACK_SIGNATURE)  {
+void init(MQTT_CALLBACK_SIGNATURE, const char** _topics, int _topic_count)  {
   mqtt_client.setServer(MQTT_BROKER, 1883);
   mqtt_client.setCallback(callback);
-  mqtt_connect();
+
+  if (_topic_count > 10) {
+    debug_printf("Too many subscriptions. Maximum is 10!\n");
+  } else {
+    for (int i = 0; i < _topic_count; i++) {
+       strcpy(topics[i], _topics[i]);
+    }
+    topic_count = _topic_count;
+
+    mqtt_connect();
+  }
 }
 
 void loop() {
@@ -33,10 +45,6 @@ void disconnect() {
   mqtt_client.disconnect();
 }
 
-void subscribe(const char* topic) {
-  mqtt_client.subscribe(topic);
-}
-
 static void mqtt_connect() {
   // Loop until we're connected. Max retries: 5
   uint8_t retries = 0;
@@ -49,6 +57,10 @@ static void mqtt_connect() {
     // Attempt to connect
     if (mqtt_client.connect(client_id, MQTT_USER, MQTT_PWD)) {
       debug_printf("connected\n");
+      // Here is where we need to subscribe again to all endpoints
+      for (int i = 0; i < topic_count; i++) {
+        mqtt_client.subscribe(topics[i]);
+      }
     } else {
       debug_printf("failed, rc=%d try again in 5 seconds", mqtt_client.state());
 

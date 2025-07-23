@@ -8,10 +8,9 @@
 
 namespace sprinkler_controller::mqttcli {
 
-void init(MQTT_CALLBACK_SIGNATURE);
+void init(MQTT_CALLBACK_SIGNATURE, const char** topics, int topic_count);
 void loop();
 void publish(const char* topic, const char* payload, bool retained);
-void subscribe(const char* topic);
 void disconnect();
 
 } // namespace sprinkler_controller::mqttcli
