@@ -139,3 +139,25 @@ Also, it turns out that the ESP8266 doesn't have a very precise RTC (Real Time C
  
  
 
+## ESP8266 Project
+
+The ESP8266 project was built using [Platform IO](https://docs.platformio.org/).
+
+The platformio.ini file contains the default parameters to run the targets below. You can change this file or provide the parameters in the context of each `pio run <target>` command [(usage)](https://docs.platformio.org/en/latest/core/userguide/cmd_run.html#usage).
+
+### Build
+
+In order to compile and build the project you just need to run the following command.
+
+`pio run build`
+
+### Upload
+
+You can upload the sketch using serial port or OTA (Over The Air).
+
+The sketch is ready to receive (OTA) updates. In order to upload OTA, you need to set the `upload_port` parameter with the IP address or your ESP8266.
+For serial upload, just se the `upload_port` parameter with the appropriate serial interface.
+
+`pio run upload`
+
+
